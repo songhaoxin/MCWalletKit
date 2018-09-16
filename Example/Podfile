@@ -1,0 +1,6 @@
+use_frameworks!
+
+target 'MCWalletKit_Example' do
+    platform:ios, '9.0'
+  pod 'MCWalletKit', :path => '../'
+end
