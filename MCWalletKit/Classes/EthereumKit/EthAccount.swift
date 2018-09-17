@@ -8,65 +8,98 @@
 import UIKit
 import RealmSwift
 
-public class EthAccount: Object {
-    // MARK:- Realm 属性
-    // 地址
-    @objc dynamic var address: String = ""
+/// 帐户类，与一个具体的币种唯一关联
+public class EthAccount: NSObject {
     
-    // 对应的token
-    @objc dynamic var token: Token? = nil
+    //MARK:- 属性
+    /// 关联的钱包实例
+    var wallet: MCWallet
     
-    // 所属的钱包
-    let wallet = LinkingObjects(fromType: MCWallet.self, property: "accounts")
+    // 与之关联的币种信息
+    var token: Token = Token()
     
-    // 设置主键
-    override public static func primaryKey() -> String? {
-        return "address"
+    // 余额
+    var balance: Double = 0.0
+    
+    //MARK:-
+    public  init(wallet:MCWallet, token:Token) {
+        self.wallet = wallet
+        self.token = token
+        super.init()
     }
     
-    //MARK:- 公有方法
-    public static func existAddress(address: String) -> Bool {
-        if 0 == address.count {return false}
-        
-        let realm = RealmDBHelper.shared.mcDB;
-        let w = realm.objects(EthAccount.self).filter("address = %@",address).first
-        if nil != w {
-            return true
-        }
-        
-        return false
-    }
-    
-    //MARK:- EthAccountable 协议方法
-    /// 导出私钥
-    public func exportPrivateKye() -> String {
-        return ""
-    }
-    
-    /// 导出地址
-    public func exportAddress() -> String {
-        return ""
-    }
-    
-    /// 签名
-    public func sign() -> String {
-        return ""
-    }
-    
-    
-    /// 转帐
-    public func transcateByRaw(to: String, gasPrice: Int, gasLimit: Int, nonce: Int, data: Data) {
+    // 从服务端更新该币种的
+    public func refreshFromServer() {
         
     }
     
-    /// 余额
-    public func getBalance() -> Double {
-        return 0.0
+    // 从服务端获取交易数据
+    public func fecthTransinfo() -> [EthTranscation] {
+        let trans = [EthTranscation]()
+        return trans
     }
-    
-    
 
-}
-extension EthAccount: Accountable {
+    //MARK:- EthAccountable 协议方法
+    /// 导出(显示)私钥
+    public func exportPrivateKye() -> String {
+        if 1 == self.wallet.walletType {
+            if nil == self.wallet.hdWallet {return ""}
+            let coin = Coin(rawValue: UInt32(token.coinIdx))
+            return (try! self.wallet.hdWallet?.generatePrivateKey(coin: coin!).raw.toHexString())!
+        } else {
+            if nil == self.wallet.wallet {return ""}
+            return (self.wallet.wallet?.dumpPrivateKey())!
+        }
+    }
     
+    /// 导出（显示）地址
+    public func exportAddress() -> String {
+        if 1 == self.wallet.walletType {
+            if nil == self.wallet.hdWallet {return ""}
+            let coin = Coin(rawValue: UInt32(token.coinIdx))
+            return (try! self.wallet.hdWallet?.generateAddress(coin: coin!))!
+        } else {
+            if nil == self.wallet.wallet {return ""}
+            return (self.wallet.wallet?.generateAddress())!
+        }
+    }
+
+    /// 签名交易，并返回签名的字符串
+    public func signTranscationData() throws -> String {
+        let privateKey = self.exportPrivateKye()
+        let w = Wallet(network: MCAppConfig.network, privateKey: privateKey, debugPrints: false)
+        var tx: String
+        
+        let coinType = Coin(rawValue: UInt32(self.token.coinIdx))
+        if Coin.ethereum == coinType { // 以太坊上的交易
+            if self.token.contract == "" {// ETH 交易
+                
+            } else {// 代币交易
+                let erc20Coin = ERC20(contractAddress: self.token.contract,
+                                      decimal: self.token.decimals,
+                                      symbol: self.token.symbol)
+                let parameterData: Data
+                do {
+                    parameterData = try erc20Coin.generateDataParameter(toAddress: "0x000",
+                                                                        amount: "10")
+                } catch let error {
+                    fatalError("Error:\(error.localizedDescription)")
+                }
+                let rawTransacton = RawTransaction(wei: "0",
+                                                   to: erc20Coin.contractAddress,
+                                                   gasPrice: Converter.toWei(GWei: 10), // 从服务器获取合理值
+                    gasLimit: 210000,    // 从服务器获取合理值
+                    nonce: 0,    // 从服务器获取合理值
+                    data: parameterData)
+                
+                tx = try w.sign(rawTransaction: rawTransacton)
+                return tx
+            }
+            
+        } else if Coin.bitcoin == coinType{ // 比特币上的交易
+            
+        }
+        return ""
+    }
 }
+

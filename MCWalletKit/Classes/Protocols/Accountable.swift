@@ -9,6 +9,7 @@ import UIKit
 
 /// 用于帐户的协议
 public protocol Accountable {
+    
     /// 导出私钥
     func exportPrivateKye() -> String
     

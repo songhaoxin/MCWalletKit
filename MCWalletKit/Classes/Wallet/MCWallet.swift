@@ -11,8 +11,9 @@ import RealmSwift
 public class MCWallet: Object {
 
     // MARK:- Realm 属性
-    // 钱包ID
+    // 钱包ID (以地址为唯一标识）
     @objc dynamic public var id:String = ""
+    
     // 钱包的名称
     @objc dynamic public var name:String = ""
     
@@ -21,6 +22,9 @@ public class MCWallet: Object {
     
     // 手机号
     @objc dynamic public var phoneNumber: String = ""
+    
+    // 在服务端的id,空表示没有上传到服务器
+    @objc dynamic public var serverId: String = ""
     
     // 钱包的助记词（加密！）
     let mnemonicWords = List<String>()
@@ -32,7 +36,7 @@ public class MCWallet: Object {
     @objc dynamic public var password: String = ""
     
     // 钱包所关联的Tokens
-    public let accounts = List<EthAccount>()
+    public let tokens = List<Token>()
     
     // HD钱包实例
     var hdWallet: HDWallet? = nil
@@ -52,11 +56,7 @@ public class MCWallet: Object {
     }
     
     // MARK:- 业务方法
-    /// 设置最近使用的钱包
-    public func setRecentlyWallet() {
-        UserDefaults.standard.set(self.name, forKey:RECENTLY_WALLET_NAME )
-    }
-    
+ 
     /// 设置 助记词 到 对象实例
     public func convertMnemonicWords(mnemonicWords: [String]) {
         self.mnemonicWords.removeAll()
@@ -77,8 +77,18 @@ public class MCWallet: Object {
             let deWord = CryptTools.Decode_AES_ECB(strToDecode: word, key: CryptTools.secKey)
             words.append(deWord)
         }
-        
         return words
+    }
+    
+    /// 导出（查看）钱包的私钥
+    public func exportPrivateKey()  -> String {
+        if 1 == self.walletType { //如果是HD钱包
+            if nil == self.hdWallet {return ""}
+            return self.hdWallet!.dumpMainPrivateKey()
+        } else {
+            if nil == self.wallet {return ""}
+            return self.wallet!.dumpPrivateKey()
+        }
     }
     
     /// 修改钱包的名称
@@ -91,7 +101,6 @@ public class MCWallet: Object {
         if nil == w {
             return
         }
-        
         try! realm.write {
             w!.name = name
         }
@@ -108,42 +117,93 @@ public class MCWallet: Object {
     public func modifyPassword(password: String) {
         if 0 == password.count {return}
         let secPassword = CryptTools.Encode_AES_ECB(strToEncode: password, key: CryptTools.secKey)
-        self.password = secPassword
-    }
-    
-    /// 是否存在 帐户
-    public func existAccount(address: String) -> Bool {
-        return EthAccount.existAddress(address: address)
-    }
-    
-    /// 增加帐户
-    public func addAccountWithToken(token:Token) {
-        if nil == hdWallet { return  }
         
-        let tokenCoin = Coin(rawValue: UInt32(token.coinIdx))
-        let address = try! self.hdWallet!.generateAddress(coin: tokenCoin!)
-
-        let w = MCWalletManger.default.walletList.filter("id = %@",self.id).first
-        if nil == w { return}
-        
-        var account = w!.accounts.filter("address = %@",address).first
-        if nil != account { return}
-        
-        // 创建Account
-        account = EthAccount()
-        account?.address = address
-        account?.token = token
-        
+        let realmSelf = MCWalletManger.default.walletList.filter("id = %@",self.id).first
+        if nil == realmSelf {return}
         
         let realm = RealmDBHelper.shared.mcDB
         try! realm.write {
-            w?.accounts.append(account!)
+            realmSelf?.password = secPassword
         }
-        
     }
     
-    /// 删除帐户
+    /// 是否存在 Token
+    public func existTokenWithSymbol(symbol: String) -> Bool {
+        let t = self.tokens.filter("symbol = %@",symbol).first
+        if nil == t {return false}
+        return true
+    }
+    
+    /// 增加Token
+    public func addToken(token:Token) {
+        // 如果不存在token,就增加
+        if !Token.exist(symbol: token.symbol) {
+            Token.addToken(token: token)
+        }
+        let realmSelf = MCWalletManger.default.walletList.filter("id = %@",self.id).first
+        if nil == realmSelf {return}
+        
+        let realm = RealmDBHelper.shared.mcDB
+        try! realm.write {
+            realmSelf?.tokens.append(token)
+        }
+    }
+    
+    /// 删除Token
+    public func removeToken(token:Token) {
+        let realmSelf = MCWalletManger.default.walletList.filter("id = %@",self.id).first
+        if realmSelf?.tokens == nil {return}
+        if !realmSelf!.tokens.contains(token) { return}
+        let idx = realmSelf?.tokens.index(of: token)
+        
+        let realm = RealmDBHelper.shared.mcDB
+        try! realm.write {
+            realmSelf?.tokens.remove(at: idx!)
+        }
+    }
+    
+    
+    
+    /// 对Eth帐户进行签名
+    public func signEth(rawTransaction: RawTransaction,token:Token,network:Network) throws -> String {
+        var privateSignKey: String = ""
+        if walletType == 0 {
+            //解密password
+            let pass = CryptTools.Decode_AES_ECB(strToDecode: self.password, key: CryptTools.secKey)
+            privateSignKey = CryptTools.Encode_AES_ECB(strToEncode: self.privateKey, key: pass)
+        } else if walletType == 1 {
+            privateSignKey = self.exportPrivateKey()
+        }
+        
+        ///这个地方需要重构，以适应所有的币种签名（因为不同的币种签名方法是不一样的），目前只考虑以太坊一种情况
+        let signWallet = Wallet(network: network, privateKey: privateSignKey, debugPrints: false)
+        return try signWallet.sign(rawTransaction: rawTransaction)
+    }
+    
+    /// 帐户总余额
+    public func getBalanceCount() -> Double {
+        return 0.0
+    }
     
     /// 获取帐户列表
-   
+    public func getAccounts() -> [EthAccount] {
+        var accounts = [EthAccount]()
+        for t in self.tokens {
+            let account = EthAccount(wallet: self, token: t)
+            accounts.append(account)
+        }
+        return accounts
+    }
+    
+    /// 钱包信息是否已经上传到服务器
+    public func isSend2Server() -> Bool {
+        return self.serverId != ""
+    }
+    /// 上传钱包信息到服务器
+    public func send2Server() {
+        // 通过服务端接口，上传到服务器
+    }
+    // 从服务端根据钱包serverId拉取token信息列表
+    // 获取指定地址的余额
+    // 根据交易HASH获取交易信息列表
 }
