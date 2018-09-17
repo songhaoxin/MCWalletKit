@@ -26,19 +26,28 @@ public class EthAccount: NSObject {
         self.wallet = wallet
         self.token = token
         super.init()
+        self.setBalance()
     }
     
-    // 从服务端更新该币种的
-    public func refreshFromServer() {
-        
+    /// 获取帐户余额
+    public func setBalance() {
+        let address = self.exportAddress()
+        let symbol = self.token.symbol
+        self.balance = EthAccountServiceProvider.shared.getBalance(address:address,symbol: symbol)
     }
     
-    // 从服务端获取交易数据
-    public func fecthTransinfo() -> [EthTranscation] {
-        let trans = [EthTranscation]()
-        return trans
+    
+    /// 获取交易信息列表
+    public func getTransactions() -> [EthTranscation] {
+        let address = self.exportAddress()
+        return EthAccountServiceProvider.shared.getTransactions(address: address)
     }
-
+    
+    /// 获取单条交易信息
+    public func getTransaction(hash: String) -> EthTranscation? {
+        return EthAccountServiceProvider.shared.getTransaction(hash:hash)
+    }
+    
     //MARK:- EthAccountable 协议方法
     /// 导出(显示)私钥
     public func exportPrivateKye() -> String {
@@ -64,42 +73,64 @@ public class EthAccount: NSObject {
         }
     }
 
-    /// 签名交易，并返回签名的字符串
-    public func signTranscationData() throws -> String {
+    /// 签名ETH交易
+    public func signEthTransaction(value: Wei,//需要转出的金额，单位是 以太币，调用方法转换成Wei,
+                                    to: String,//收币方地址
+                                    gasPrice: Int,//该笔交易的价格
+                                    gasLimit: Int,//调用服务方接口,
+                                    nonce: Int) throws -> String //调用服务方接口提供
+    {
+        let rt = RawTransaction.init(value:value,
+            to: to,
+            gasPrice: gasPrice,
+            gasLimit: gasLimit,
+            nonce: nonce)
+        
         let privateKey = self.exportPrivateKye()
         let w = Wallet(network: MCAppConfig.network, privateKey: privateKey, debugPrints: false)
-        var tx: String
+        let tx: String = try! w.sign(rawTransaction: rt)
         
-        let coinType = Coin(rawValue: UInt32(self.token.coinIdx))
-        if Coin.ethereum == coinType { // 以太坊上的交易
-            if self.token.contract == "" {// ETH 交易
-                
-            } else {// 代币交易
-                let erc20Coin = ERC20(contractAddress: self.token.contract,
-                                      decimal: self.token.decimals,
-                                      symbol: self.token.symbol)
-                let parameterData: Data
-                do {
-                    parameterData = try erc20Coin.generateDataParameter(toAddress: "0x000",
-                                                                        amount: "10")
-                } catch let error {
-                    fatalError("Error:\(error.localizedDescription)")
-                }
-                let rawTransacton = RawTransaction(wei: "0",
-                                                   to: erc20Coin.contractAddress,
-                                                   gasPrice: Converter.toWei(GWei: 10), // 从服务器获取合理值
-                    gasLimit: 210000,    // 从服务器获取合理值
-                    nonce: 0,    // 从服务器获取合理值
-                    data: parameterData)
-                
-                tx = try w.sign(rawTransaction: rawTransacton)
-                return tx
-            }
-            
-        } else if Coin.bitcoin == coinType{ // 比特币上的交易
-            
-        }
-        return ""
+        return tx
     }
+    
+    
+    /// 签名ERC20代币交易
+    public func signERC20Transaction(to: String,
+                                     amount: String,
+                                     gasPrice: Int,
+                                     gasLimit: Int,
+                                     nonce: Int
+        ) throws -> String
+    {
+        
+        //第一步：创建交易数据
+        let erc20Coin = ERC20(contractAddress: self.token.contract,
+                              decimal: self.token.decimals,
+                              symbol: self.token.symbol)
+        let parameterData: Data
+        do {
+            parameterData = try erc20Coin.generateDataParameter(toAddress: to,
+                                                                amount: amount)
+        } catch let err {
+            fatalError("Error:\(err.localizedDescription)")
+        }
+        let rt = RawTransaction(wei: "0",
+                                to: erc20Coin.contractAddress,
+                                gasPrice: gasPrice,
+                                gasLimit: gasLimit,
+                                nonce: nonce,
+                                data: parameterData)
+        // 第二步：签名
+        var tx:String
+        let privateKey = self.exportPrivateKye()
+        let w = Wallet(network: MCAppConfig.network, privateKey: privateKey, debugPrints: false)
+        do {
+            tx = try w.sign(rawTransaction: rt)
+        }catch let err {
+            fatalError("Error:\(err.localizedDescription)")
+        }
+        return tx
+    }
+    
 }
 

@@ -11,24 +11,32 @@ import CryptoEthereumSwift
 let RECENTLY_WALLET_NAME = "_recentlyWallet_name_"
 
 public class MCWalletManger: NSObject {
+    
+    // MARK:- 构造方法
+    override public init() {
+        super.init()
+        //从归档中迁移钱包到数据库
+        self.migrateFromDirectoryForOldVersion()
+    }
+    
+    
     // MARK:- 属性
     // 单例
     public static let `default` = MCWalletManger()
     
-    override public init() {
-        //从归档中迁移钱包到数据库
-        super.init()
-        self.migrateFromDirectoryForOldVersion()
-    }
-    
-    // 请求的网络
+    // 请求的网络类型
     private var network: Network = MCAppConfig.network
     
     // 钱包列表
     public var walletList = RealmDBHelper.shared.mcDB.objects(MCWallet.self)
     
-    // MARK:- 方法
-    // 最近使用的钱包name
+    // MARK:- 公有方法
+    /// 是否存在钱包
+    public func hasWallet() -> Bool {
+        return walletList.count > 0
+    }
+    
+    /// 最近使用的钱包名称
     public func recentlyWallet() -> MCWallet? {
         let walletName =  UserDefaults.standard.value(forKey: RECENTLY_WALLET_NAME) as? String
         if nil == walletName {
@@ -68,28 +76,14 @@ public class MCWalletManger: NSObject {
         return Mnemonic.create(strength: .normal, language: language)
     }
     
-    /// 是否存在 同名 的钱包
-    public  func existWalletWithName(name: String) -> Bool {
-        let w = self.walletList.filter("name = %@",name).first
-        if nil == w {
-            return false
-        }
-        return true
-    }
-    /// 是存在 ID一致 的钱包
-    public func existWallet(wallet:MCWallet) -> Bool {
-        let w = self.walletList.filter("id = %@",wallet.id).first
-        if nil == w {
-            return false
-        }
-        return true
-    }
+    
     
     public func descript() {
         let realm = RealmDBHelper.shared.mcDB
         print(realm.configuration.fileURL ?? "")
     }
     
+    // MARK:- 创建（导入）钱包
     /// 根据助记词（创建、导入）HD钱包
     /// 成功返回钱包实例，失败返回nil
     public func createHDWallet(name:String!,
@@ -221,7 +215,26 @@ public class MCWalletManger: NSObject {
         return mcWallet
     }
     
-    public  let dataDir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/data/"
+    // MARK:- 辅助性私有方法
+    /// 是否存在 同名 的钱包
+    private  func existWalletWithName(name: String) -> Bool {
+        let w = self.walletList.filter("name = %@",name).first
+        if nil == w {
+            return false
+        }
+        return true
+    }
+    /// 是存在 ID一致 的钱包
+    private func existWallet(wallet:MCWallet) -> Bool {
+        let w = self.walletList.filter("id = %@",wallet.id).first
+        if nil == w {
+            return false
+        }
+        return true
+    }
+    
+    // MARK:- 老版本的数据迁移
+    private  let dataDir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/data/"
     // 从归档文件中迁移钱包到数据库
     private func migrateFromDirectoryForOldVersion() {
         let fileManager = FileManager.default
@@ -255,11 +268,6 @@ public class MCWalletManger: NSObject {
         }
         
     }
-    
 
-    
-    public  func createWallet() {
-       
-    }
 
 }

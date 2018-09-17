@@ -44,7 +44,9 @@ public class MCWallet: Object {
     // 非HD钱包实例
     var wallet: Wallet? = nil
     
-    
+    // 处理钱包的服务者对象
+    //var serviceProvider: WalletServiceble? = nil
+        
     // 设置主键
     override public static func primaryKey() -> String? {
         return "id"
@@ -56,7 +58,6 @@ public class MCWallet: Object {
     }
     
     // MARK:- 业务方法
- 
     /// 设置 助记词 到 对象实例
     public func convertMnemonicWords(mnemonicWords: [String]) {
         self.mnemonicWords.removeAll()
@@ -106,12 +107,6 @@ public class MCWallet: Object {
         }
     }
     
-    /// 判断密码是否正确
-    public func verfyPassword(password: String) -> Bool {
-        if 0 == password.count {return false}
-        let secPassword = CryptTools.Encode_AES_ECB(strToEncode: password, key: CryptTools.secKey)
-        return secPassword == self.password
-    }
     
     /// 修改钱包的密码
     public func modifyPassword(password: String) {
@@ -125,13 +120,6 @@ public class MCWallet: Object {
         try! realm.write {
             realmSelf?.password = secPassword
         }
-    }
-    
-    /// 是否存在 Token
-    public func existTokenWithSymbol(symbol: String) -> Bool {
-        let t = self.tokens.filter("symbol = %@",symbol).first
-        if nil == t {return false}
-        return true
     }
     
     /// 增加Token
@@ -162,7 +150,19 @@ public class MCWallet: Object {
         }
     }
     
+    /// 判断密码是否正确
+    public func verfyPassword(password: String) -> Bool {
+        if 0 == password.count {return false}
+        let secPassword = CryptTools.Encode_AES_ECB(strToEncode: password, key: CryptTools.secKey)
+        return secPassword == self.password
+    }
     
+    /// 是否存在 Token
+    private func existTokenWithSymbol(symbol: String) -> Bool {
+        let t = self.tokens.filter("symbol = %@",symbol).first
+        if nil == t {return false}
+        return true
+    }
     
     /// 对Eth帐户进行签名
     public func signEth(rawTransaction: RawTransaction,token:Token,network:Network) throws -> String {
@@ -180,30 +180,67 @@ public class MCWallet: Object {
         return try signWallet.sign(rawTransaction: rawTransaction)
     }
     
+    // MARK:- 与服务相关方法
     /// 帐户总余额
     public func getBalanceCount() -> Double {
-        return 0.0
+        if "" == self.serverId {
+            self.send2Server()
+        }
+        return WalletServiceEthProvider.shared.getBalanceCount(serverId: self.serverId)
     }
     
     /// 获取帐户列表
     public func getAccounts() -> [EthAccount] {
+        self.refreshTokens()
         var accounts = [EthAccount]()
         for t in self.tokens {
             let account = EthAccount(wallet: self, token: t)
+            
             accounts.append(account)
         }
         return accounts
     }
     
-    /// 钱包信息是否已经上传到服务器
-    public func isSend2Server() -> Bool {
-        return self.serverId != ""
-    }
+    
     /// 上传钱包信息到服务器
     public func send2Server() {
         // 通过服务端接口，上传到服务器
+        let realmSelf = MCWalletManger.default.walletList.filter("id = %@",self.id).first
+        if nil == realmSelf {return}
+        
+        let realm = RealmDBHelper.shared.mcDB
+        try! realm.write {
+            realmSelf?.password = WalletServiceEthProvider.shared.sendWalletInfo2Server(wallet: self)
+        }
+        
     }
-    // 从服务端根据钱包serverId拉取token信息列表
-    // 获取指定地址的余额
-    // 根据交易HASH获取交易信息列表
+    
+    
+    /// 钱包信息是否已经上传到服务器
+    private func isSend2Server() -> Bool {
+        return self.serverId != ""
+    }
+    
+    // 从服务端根据钱包serverId刷新钱包token信息列表
+    private func refreshTokens() {
+        if "" == self.serverId {
+            self.send2Server()
+        }
+        let tokens = WalletServiceEthProvider.shared.fecthTokens(serverId: self.serverId)
+        if 0 == tokens.count {return}
+        
+        let realmSelf = MCWalletManger.default.walletList.filter("id = %@",self.id).first
+        let existTokens = realmSelf?.tokens
+        
+        let realm = RealmDBHelper.shared.mcDB
+        for t in tokens {
+            if !(existTokens?.contains(t))! {
+                try! realm.write {
+                    existTokens?.append(t)
+                }
+            }
+        }
+        
+    }
+
 }
