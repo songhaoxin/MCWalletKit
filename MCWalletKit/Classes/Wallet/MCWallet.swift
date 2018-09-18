@@ -122,6 +122,24 @@ public class MCWallet: Object {
         }
     }
     
+    // 获取交易帐户
+    public func getAccountWithToken(token:Token) -> Accountalbe? {
+        if !tokens.contains(token) {return nil}
+        var account:Accountalbe
+        if Coin(rawValue: UInt32(token.coinIdx)) == Coin.bitcoin {
+            account = BtcAccount(wallet: self, token: token)
+        } else {
+            account = EthAccount(wallet: self, token: token)
+        }
+        return account
+    }
+    
+    // 是否包含指定的Token
+    public func existToken(token:Token) -> Bool{
+        if 0 == tokens.count { return false}
+        return tokens.contains(token)
+    }
+    
     /// 增加Token
     public func addToken(token:Token) {
         // 如果不存在token,就增加

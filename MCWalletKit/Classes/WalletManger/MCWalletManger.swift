@@ -38,9 +38,12 @@ public class MCWalletManger: NSObject {
     
     /// 最近使用的钱包名称
     public func recentlyWallet() -> MCWallet? {
+        if walletList.count <= 0 {return nil}
+        
         let walletName =  UserDefaults.standard.value(forKey: RECENTLY_WALLET_NAME) as? String
         if nil == walletName {
-            return nil
+            self.setRecentlyWallet(wallet: walletList.last!)
+            return walletList.last
         }
         let realm = RealmDBHelper.shared.mcDB;
         return realm.objects(MCWallet.self).filter("name = %@",walletName!).first

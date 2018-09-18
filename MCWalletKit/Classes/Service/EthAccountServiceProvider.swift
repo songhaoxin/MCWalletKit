@@ -33,6 +33,10 @@ class EthAccountServiceProvider: NSObject {
         // fecth from server ...
         return nil
     }
+    
+    public func sendTransaction(rawTransacitionString: String) {
+        
+    }
 }
 
 extension EthAccountServiceProvider:AccountServiceble {

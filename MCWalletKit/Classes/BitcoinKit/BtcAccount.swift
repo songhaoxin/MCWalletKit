@@ -23,14 +23,20 @@ class BtcAccount: NSObject {
         self.wallet = wallet
         self.token = token
         super.init()
-        self.setBalance()
     }
     
     /// 获取帐户余额
-    public func setBalance() {
+    func getBalance() -> Double{
+        return 0.0
+    }
+    
+    func setBalance() {
+    }
+    
+    func sendTransaction(rawTransacitionString: String) {
     }
 }
 
 extension BtcAccount:Accountalbe {
-    
+
 }

@@ -29,28 +29,38 @@ public class EthAccount: NSObject {
         //self.setBalance()
     }
     
-    /// 获取帐户余额
+    /// 实时刷新帐户余额
     public func setBalance() {
-        if nil == MCAppConfig.accountServiceHandler { return}
+        if nil == MCAppConfig.ethAccountServiceHandler { return}
         
         let address = self.exportAddress()
         let symbol = self.token.symbol
-        self.balance = (MCAppConfig.accountServiceHandler!.getBalance(address: address, symbol: symbol))
+        self.balance = (MCAppConfig.ethAccountServiceHandler!.getBalance(address: address, symbol: symbol))
     }
+    
+    /// 获取帐户余额
+    public func getBalance() -> Double {
+        if nil == MCAppConfig.ethAccountServiceHandler { return 0.0}
+        
+        let address = self.exportAddress()
+        let symbol = self.token.symbol
+        return (MCAppConfig.ethAccountServiceHandler!.getBalance(address: address, symbol: symbol))
+    }
+    
     
     
     /// 获取交易信息列表
     public func getTransactions() -> [EthTranscation]? {
         
-        if nil == MCAppConfig.accountServiceHandler { return nil}
+        if nil == MCAppConfig.ethAccountServiceHandler { return nil}
         let address = self.exportAddress()
-        return MCAppConfig.accountServiceHandler?.getTransactions(address: address) as? [EthTranscation]
+        return MCAppConfig.ethAccountServiceHandler?.getTransactions(address: address) as? [EthTranscation]
     }
     
     /// 获取单条交易信息
     public func getTransaction(hash: String) -> EthTranscation? {
-        if nil == MCAppConfig.accountServiceHandler { return nil}
-        return MCAppConfig.accountServiceHandler?.getTransaction(hash: hash) as? EthTranscation
+        if nil == MCAppConfig.ethAccountServiceHandler { return nil}
+        return MCAppConfig.ethAccountServiceHandler?.getTransaction(hash: hash) as? EthTranscation
     }
     
     //MARK:- EthAccountable 协议方法
@@ -135,6 +145,12 @@ public class EthAccount: NSObject {
             fatalError("Error:\(err.localizedDescription)")
         }
         return tx
+    }
+    
+    //发送交易
+    public func sendTransaction(rawTransacitionString: String) {
+        if nil == MCAppConfig.ethAccountServiceHandler {return}
+        return MCAppConfig.ethAccountServiceHandler!.sendTransaction(rawTransacitionString:rawTransacitionString)
     }
 }
 

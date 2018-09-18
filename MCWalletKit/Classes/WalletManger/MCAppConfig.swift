@@ -12,9 +12,12 @@ public struct MCAppConfig {
     public static let network: Network = .mainnet
     
     // 钱包相关业务的服务端API处理者
-    public static var walletServiceHandler: WalletServiceble?
+    public static var walletServiceHandler: WalletServiceble? = WalletServiceEthProvider.shared
     
-    // 帐户相关业务的服务端API处理者
-    public static var accountServiceHandler: AccountServiceble?
+    // Eth帐户相关业务的服务端API处理者
+    public static var ethAccountServiceHandler: AccountServiceble? = EthAccountServiceProvider.shared
+    
+    // Btc 帐户相关业务的服务端API处理者
+    public static var btcAccountServiceHandler: AccountServiceble?
     
 }

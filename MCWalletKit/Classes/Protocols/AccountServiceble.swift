@@ -17,4 +17,6 @@ public protocol AccountServiceble {
     
     /// 根据交易HASH获取交易信息列表
     func getTransaction(hash: String) -> AnyObject?
+    
+    func sendTransaction(rawTransacitionString: String)
 }

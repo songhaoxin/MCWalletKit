@@ -19,12 +19,12 @@ public enum Coin: UInt32 {
 
 public class Token: Object {
     // MARK:- Realm 属性
-    @objc dynamic var symbol: String = ""
-    @objc dynamic var contract: String = ""
-    @objc dynamic var decimals: Int = 0
-    @objc dynamic var image: String = ""
-    @objc dynamic var price: Double = 0.0 //CNY
-    @objc dynamic var coinIdx: Int = 60
+    @objc dynamic public var symbol: String = ""
+    @objc dynamic public var contract: String = ""
+    @objc dynamic public var decimals: Int = 0
+    @objc dynamic public var image: String = ""
+    @objc dynamic public var price: Double = 0.0 //CNY
+    @objc dynamic public var coinIdx: Int = 60
     
     /// 设置主键
     override public static func primaryKey() -> String? {

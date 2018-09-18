@@ -10,4 +10,6 @@ public protocol Accountalbe {
     var token: Token {get set}
     var balance: Double {get set}
     func setBalance()
+    func getBalance() -> Double
+    func sendTransaction(rawTransacitionString: String)
 }
