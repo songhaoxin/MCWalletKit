@@ -16,36 +16,41 @@ public class EthAccount: NSObject {
     var wallet: MCWallet
     
     // 与之关联的币种信息
-    var token: Token = Token()
+    public var token: Token = Token()
     
     // 余额
-    var balance: Double = 0.0
+    public var balance: Double = 0.0
     
     //MARK:-
     public  init(wallet:MCWallet, token:Token) {
         self.wallet = wallet
         self.token = token
         super.init()
-        self.setBalance()
+        //self.setBalance()
     }
     
     /// 获取帐户余额
     public func setBalance() {
+        if nil == MCAppConfig.accountServiceHandler { return}
+        
         let address = self.exportAddress()
         let symbol = self.token.symbol
-        self.balance = EthAccountServiceProvider.shared.getBalance(address:address,symbol: symbol)
+        self.balance = (MCAppConfig.accountServiceHandler!.getBalance(address: address, symbol: symbol))
     }
     
     
     /// 获取交易信息列表
-    public func getTransactions() -> [EthTranscation] {
+    public func getTransactions() -> [EthTranscation]? {
+        
+        if nil == MCAppConfig.accountServiceHandler { return nil}
         let address = self.exportAddress()
-        return EthAccountServiceProvider.shared.getTransactions(address: address)
+        return MCAppConfig.accountServiceHandler?.getTransactions(address: address) as? [EthTranscation]
     }
     
     /// 获取单条交易信息
     public func getTransaction(hash: String) -> EthTranscation? {
-        return EthAccountServiceProvider.shared.getTransaction(hash:hash)
+        if nil == MCAppConfig.accountServiceHandler { return nil}
+        return MCAppConfig.accountServiceHandler?.getTransaction(hash: hash) as? EthTranscation
     }
     
     //MARK:- EthAccountable 协议方法
@@ -131,6 +136,9 @@ public class EthAccount: NSObject {
         }
         return tx
     }
+}
+
+extension EthAccount:Accountalbe{
     
 }
 

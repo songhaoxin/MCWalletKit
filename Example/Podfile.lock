@@ -1,5 +1,5 @@
 PODS:
-  - MCWalletKit (0.1.0):
+  - MCWalletKit (0.1.1):
     - RealmSwift
   - Realm (3.7.6):
     - Realm/Headers (= 3.7.6)
@@ -20,7 +20,7 @@ EXTERNAL SOURCES:
     :path: "../"
 
 SPEC CHECKSUMS:
-  MCWalletKit: 500d6ab7e658fd78461cf060c20fc79e166555dd
+  MCWalletKit: f5ce887b47f2d709d70ea37b21535f27dbf42f7c
   Realm: 9eaecad54712d6246d08ba34c10f354e4715d7d3
   RealmSwift: 1fe08b4ebaeeaacf17f9ba0343f7b25c9fc31fa6
 

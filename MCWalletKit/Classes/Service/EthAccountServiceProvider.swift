@@ -22,15 +22,19 @@ class EthAccountServiceProvider: NSObject {
     }
     
     /// 从服务端获取交易信息
-    public func getTransactions(address: String) -> [EthTranscation] {
+    public func getTransactions(address: String) -> [AnyObject]? {
         let transacations = [EthTranscation]()
         // fecth form server ...
         return transacations
     }
     
     /// 根据交易HASH获取交易信息列表
-    public func getTransaction(hash: String) -> EthTranscation? {
+    public func getTransaction(hash: String) -> AnyObject? {
         // fecth from server ...
         return nil
     }
+}
+
+extension EthAccountServiceProvider:AccountServiceble {
+    
 }

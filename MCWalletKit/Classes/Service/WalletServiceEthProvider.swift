@@ -23,12 +23,23 @@ class WalletServiceEthProvider: NSObject {
     // 从服务端根据钱包serverId拉取token信息列表
     public func fecthTokens(serverId:String) -> [Token] {
         let tokens = [Token]()
-        // do some thing ...
+        // do something ...
         return tokens
+    }
+    
+    // 一次性从服务端返回指定钱包中所有帐户信息（包括 币种 + 余额 ）
+    func fecthAccounts(wallet: MCWallet) -> [Accountalbe] {
+        let accountableArry = [Accountalbe]()
+        // do something ...
+        return accountableArry
     }
     
     public func getBalanceCount(serverId: String) -> Double {
         // do some thing form server ...
         return 0
     }
+}
+
+extension WalletServiceEthProvider:WalletServiceble {
+    
 }

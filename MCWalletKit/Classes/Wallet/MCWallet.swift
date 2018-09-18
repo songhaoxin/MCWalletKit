@@ -186,33 +186,50 @@ public class MCWallet: Object {
         if "" == self.serverId {
             self.send2Server()
         }
-        return WalletServiceEthProvider.shared.getBalanceCount(serverId: self.serverId)
+        if nil == MCAppConfig.walletServiceHandler {
+            return 0.0
+        } else {
+            return (MCAppConfig.walletServiceHandler!.getBalanceCount(serverId: self.serverId))
+        }
     }
     
-    /// 获取帐户列表
-    public func getAccounts() -> [EthAccount] {
+    /// 分批获取帐户列表
+    public func getAccounts() -> [Accountalbe] {
         self.refreshTokens()
-        var accounts = [EthAccount]()
+        var accounts = [Accountalbe]()
         for t in self.tokens {
-            let account = EthAccount(wallet: self, token: t)
+            var theAccount: Accountalbe
+            if Coin(rawValue: UInt32(t.coinIdx)) == Coin.bitcoin {
+                theAccount = BtcAccount(wallet: self, token: t)
+            } else {
+                theAccount = EthAccount(wallet: self, token: t)
+            }
+            theAccount.setBalance()//获取最新的余额
             
-            accounts.append(account)
+            accounts.append(theAccount)
         }
         return accounts
+    }
+    
+    // 一次性从服务端返回当前钱包的所有帐户信息
+    public func getAccountsOnce() -> [Accountalbe]? {
+        if nil == MCAppConfig.walletServiceHandler {return nil}
+        return MCAppConfig.walletServiceHandler!.fecthAccounts(wallet: self)
     }
     
     
     /// 上传钱包信息到服务器
     public func send2Server() {
-        // 通过服务端接口，上传到服务器
+        
+        if nil == MCAppConfig.walletServiceHandler { return}
+        
         let realmSelf = MCWalletManger.default.walletList.filter("id = %@",self.id).first
         if nil == realmSelf {return}
         
         let realm = RealmDBHelper.shared.mcDB
         try! realm.write {
-            realmSelf?.password = WalletServiceEthProvider.shared.sendWalletInfo2Server(wallet: self)
+            realmSelf?.password = (MCAppConfig.walletServiceHandler!.sendWalletInfo2Server(wallet: self))
         }
-        
     }
     
     
@@ -226,7 +243,9 @@ public class MCWallet: Object {
         if "" == self.serverId {
             self.send2Server()
         }
-        let tokens = WalletServiceEthProvider.shared.fecthTokens(serverId: self.serverId)
+        if nil == MCAppConfig.walletServiceHandler {return}
+        
+        let tokens = MCAppConfig.walletServiceHandler!.fecthTokens(serverId: self.serverId)
         if 0 == tokens.count {return}
         
         let realmSelf = MCWalletManger.default.walletList.filter("id = %@",self.id).first
@@ -240,7 +259,5 @@ public class MCWallet: Object {
                 }
             }
         }
-        
     }
-
 }
