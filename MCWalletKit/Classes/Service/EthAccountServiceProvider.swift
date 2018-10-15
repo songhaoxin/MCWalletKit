@@ -33,12 +33,15 @@ class EthAccountServiceProvider: NSObject {
         // fecth from server ...
         return nil
     }
+    func notcie2UI(smybol: String) {
+        
+    }
     
-    public func sendTransaction(rawTransacitionString: String) {
+    func setBalance(accout: Accountalbe) {
         
     }
 }
 
 extension EthAccountServiceProvider:AccountServiceble {
-    
+
 }

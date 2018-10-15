@@ -21,32 +21,52 @@ public class EthAccount: NSObject {
     // 余额
     public var balance: Double = 0.0
     
+    public var count: Double = 0.0
+    
+    public func setInfo(number:String,
+                        price_CNY: String,
+                        CNY_total: Double,
+                        price_USD: String,
+                        USD_total:Double) {
+        
+        let realm = RealmDBHelper.shared.mcDB;
+        let token: Token? = realm.objects(Token.self).filter("symbol = %@",self.token.symbol).first
+        if nil == token {return}
+
+        if MCAppConfig.currentCointCounty == "CNY" {
+            try! realm.write {
+                self.token.price = price_CNY
+                self.balance = Double(number)!
+                self.count = CNY_total
+            }
+            
+        } else {
+            try! realm.write {
+                self.token.price = price_USD
+                self.balance = Double(number)!
+                self.count = USD_total
+            }
+        }
+    }
+    
     //MARK:-
     public  init(wallet:MCWallet, token:Token) {
         self.wallet = wallet
         self.token = token
+        self.balance = 0.0
         super.init()
-        //self.setBalance()
-    }
-    
-    /// 实时刷新帐户余额
-    public func setBalance() {
-        if nil == MCAppConfig.ethAccountServiceHandler { return}
-        
-        let address = self.exportAddress()
-        let symbol = self.token.symbol
-        self.balance = (MCAppConfig.ethAccountServiceHandler!.getBalance(address: address, symbol: symbol))
+//        self.setBalance()
     }
     
     /// 获取帐户余额
-    public func getBalance() -> Double {
-        if nil == MCAppConfig.ethAccountServiceHandler { return 0.0}
-        
-        let address = self.exportAddress()
-        let symbol = self.token.symbol
-        return (MCAppConfig.ethAccountServiceHandler!.getBalance(address: address, symbol: symbol))
+    public func setBalance() {
+        if nil == MCAppConfig.ethAccountServiceHandler { return}
+        MCAppConfig.ethAccountServiceHandler?.setBalance(accout: self)
     }
     
+    public func notcie2UI(smybol: String) {
+        MCAppConfig.ethAccountServiceHandler!.notcie2UI(smybol: smybol)
+    }
     
     
     /// 获取交易信息列表
@@ -138,7 +158,9 @@ public class EthAccount: NSObject {
         // 第二步：签名
         var tx:String
         let privateKey = self.exportPrivateKye()
-        let w = Wallet(network: MCAppConfig.network, privateKey: privateKey, debugPrints: false)
+        
+        let chainId = Network.private(chainID: 1, testUse: true)
+        let w = Wallet(network: chainId, privateKey: privateKey, debugPrints: false)
         do {
             tx = try w.sign(rawTransaction: rt)
         }catch let err {
@@ -146,15 +168,9 @@ public class EthAccount: NSObject {
         }
         return tx
     }
-    
-    //发送交易
-    public func sendTransaction(rawTransacitionString: String) {
-        if nil == MCAppConfig.ethAccountServiceHandler {return}
-        return MCAppConfig.ethAccountServiceHandler!.sendTransaction(rawTransacitionString:rawTransacitionString)
-    }
 }
 
 extension EthAccount:Accountalbe{
-    
+
 }
 

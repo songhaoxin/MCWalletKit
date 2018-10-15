@@ -23,13 +23,15 @@ public class Token: Object {
     @objc dynamic public var contract: String = ""
     @objc dynamic public var decimals: Int = 0
     @objc dynamic public var image: String = ""
-    @objc dynamic public var price: Double = 0.0 //CNY
+    @objc dynamic public var price: String = "0.0" //CNY
     @objc dynamic public var coinIdx: Int = 60
     
     /// 设置主键
+    /*
     override public static func primaryKey() -> String? {
         return "symbol"
     }
+ */
     
     // MARK:- 业务方法
     

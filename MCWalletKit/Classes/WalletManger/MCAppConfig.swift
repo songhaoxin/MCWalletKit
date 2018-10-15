@@ -20,4 +20,13 @@ public struct MCAppConfig {
     // Btc 帐户相关业务的服务端API处理者
     public static var btcAccountServiceHandler: AccountServiceble?
     
+    // current coint couty
+    public static var currentCointCounty = "CNY"
+    
+    public static var currentWalletCointCount:Int = 0
+    
+    public static let lock4countBalance = NSLock.init()
+    
+    public static let smpr = DispatchSemaphore.init(value: 1)
+    
 }

@@ -7,6 +7,8 @@
 
 import Foundation
 
+public typealias TokenBlock = (_ tokens: [Token]) -> Void
+
 /// 用于处理钱包服务相关的协议
 public protocol WalletServiceble {
     
@@ -15,6 +17,7 @@ public protocol WalletServiceble {
     
     // 从服务端根据钱包serverId拉取token信息列表
     func fecthTokens(serverId:String) -> [Token]
+    
     
     // 一次性从服务端返回指定钱包中所有帐户信息（包括 币种 + 余额 ）
     func fecthAccounts(wallet: MCWallet) -> [Accountalbe]

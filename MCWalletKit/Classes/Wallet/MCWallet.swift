@@ -38,11 +38,14 @@ public class MCWallet: Object {
     // 钱包所关联的Tokens
     public let tokens = List<Token>()
     
-    // HD钱包实例
-    var hdWallet: HDWallet? = nil
+    // accounts
+    public var accounts = [Accountalbe]()
     
+    
+    // HD钱包实例
+    public var hdWallet: HDWallet? = nil
     // 非HD钱包实例
-    var wallet: Wallet? = nil
+    public var wallet: Wallet? = nil
     
     // 处理钱包的服务者对象
     //var serviceProvider: WalletServiceble? = nil
@@ -54,7 +57,7 @@ public class MCWallet: Object {
     
     // 忽略的字段
     override public static func ignoredProperties() -> [String] {
-        return ["hdWallet","wallet"]
+        return ["hdWallet","wallet","accounts"]
     }
     
     // MARK:- 业务方法
@@ -107,6 +110,20 @@ public class MCWallet: Object {
         }
     }
     
+    // 设置钱包的服务端Id
+    public func setServerId(serverId: String) {
+        if 0 == serverId.count {return}
+        if self.serverId == serverId {return}
+        
+        let realm = RealmDBHelper.shared.mcDB;
+        let w = realm.objects(MCWallet.self).filter("id = %@",self.id).first
+        if nil == w {
+            return
+        }
+        try! realm.write {
+            w!.serverId = serverId
+        }
+    }
     
     /// 修改钱包的密码
     public func modifyPassword(password: String) {
@@ -134,12 +151,6 @@ public class MCWallet: Object {
         return account
     }
     
-    // 是否包含指定的Token
-    public func existToken(token:Token) -> Bool{
-        if 0 == tokens.count { return false}
-        return tokens.contains(token)
-    }
-    
     /// 增加Token
     public func addToken(token:Token) {
         // 如果不存在token,就增加
@@ -151,7 +162,10 @@ public class MCWallet: Object {
         
         let realm = RealmDBHelper.shared.mcDB
         try! realm.write {
-            realmSelf?.tokens.append(token)
+            if (!(realmSelf?.tokens.contains(token))!) {
+                //print(realmSelf?.tokens)
+                realmSelf?.tokens.append(token)
+            }
         }
     }
     
@@ -211,23 +225,32 @@ public class MCWallet: Object {
         }
     }
     
+
     /// 分批获取帐户列表
     public func getAccounts() -> [Accountalbe] {
-        self.refreshTokens()
+        
+        self.accounts.removeAll()
         var accounts = [Accountalbe]()
-        for t in self.tokens {
+        
+        _ = self.tokens.count
+     
+        
+        
+        for (_, t) in self.tokens.enumerated() {
             var theAccount: Accountalbe
             if Coin(rawValue: UInt32(t.coinIdx)) == Coin.bitcoin {
                 theAccount = BtcAccount(wallet: self, token: t)
             } else {
                 theAccount = EthAccount(wallet: self, token: t)
             }
-            theAccount.setBalance()//获取最新的余额
             
+            theAccount.setBalance()//获取最新的余额
             accounts.append(theAccount)
         }
+        self.accounts = accounts
         return accounts
     }
+    
     
     // 一次性从服务端返回当前钱包的所有帐户信息
     public func getAccountsOnce() -> [Accountalbe]? {
@@ -256,26 +279,27 @@ public class MCWallet: Object {
         return self.serverId != ""
     }
     
-    // 从服务端根据钱包serverId刷新钱包token信息列表
-    private func refreshTokens() {
-        if "" == self.serverId {
-            self.send2Server()
-        }
-        if nil == MCAppConfig.walletServiceHandler {return}
+    
+    /// Save tokens to Db
+    public func saveDb(tokens: [Token]) {
         
-        let tokens = MCAppConfig.walletServiceHandler!.fecthTokens(serverId: self.serverId)
         if 0 == tokens.count {return}
-        
         let realmSelf = MCWalletManger.default.walletList.filter("id = %@",self.id).first
         let existTokens = realmSelf?.tokens
+        //print(existTokens)
         
         let realm = RealmDBHelper.shared.mcDB
         for t in tokens {
             if !(existTokens?.contains(t))! {
                 try! realm.write {
+                    
+                    realm.add(t)
                     existTokens?.append(t)
                 }
             }
         }
+        
     }
+    // 从服务端根据钱包serverId刷新钱包token信息列表
+    
 }

@@ -38,8 +38,15 @@ class WalletServiceEthProvider: NSObject {
         // do some thing form server ...
         return 0
     }
+    
+    func fecthTokensAndSave2Db(serverId: String, handler: ([Token]) -> Void) {
+        
+    }
+    
 }
 
 extension WalletServiceEthProvider:WalletServiceble {
     
+    
+
 }

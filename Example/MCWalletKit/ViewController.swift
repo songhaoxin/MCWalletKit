@@ -86,7 +86,7 @@ class ViewController: UIViewController {
         someToken.symbol = "wangpeng"
         someToken.coinIdx = Int(Coin.ethereum.rawValue)
         someToken.decimals = 18
-        someToken.price = 12.03
+        someToken.price = "12.03"
         someToken.image = "someimg.png"
         myWallet?.addToken(token: someToken)
         
@@ -107,7 +107,7 @@ class ViewController: UIViewController {
                                                    gasPrice: Converter.toWei(GWei: 10),
                                                    gasLimit: 21000,
                                                    nonce: 0)
-        ethAccount.sendTransaction(rawTransacitionString: tx)
+        //ethAccount.sendTransaction(rawTransacitionString: tx)
         
         //----------------------------------------------------------------------------------------------------
         // 发送代币交易
@@ -116,12 +116,12 @@ class ViewController: UIViewController {
                                                   gasPrice: Converter.toWei(GWei: 10),
                                                   gasLimit: 21000,
                                                   nonce: 0)
-        ethAccount.sendTransaction(rawTransacitionString: tx)
+        //ethAccount.sendTransaction(rawTransacitionString: tx)
      //----------------------------------------------------------------------------------------------------
         
         // 获取指定币种的余额
-        let balance = ethAccount.getBalance()
-        print(balance)
+        //let balance = ethAccount.getBalance()
+        //print(balance)
         
         // 获取帐户的所有交易信息
         _ = ethAccount.getTransactions()

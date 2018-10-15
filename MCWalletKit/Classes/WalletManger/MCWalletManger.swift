@@ -8,27 +8,53 @@
 import UIKit
 import CryptoEthereumSwift
 
-let RECENTLY_WALLET_NAME = "_recentlyWallet_name_"
+let RECENTLY_WALLET_ID = "_recentlyWallet_id_"
 
 public class MCWalletManger: NSObject {
     
     // MARK:- 构造方法
     override public init() {
         super.init()
-        //从归档中迁移钱包到数据库
-        self.migrateFromDirectoryForOldVersion()
+        self.loadWalletsFromDb()
     }
     
     
     // MARK:- 属性
     // 单例
     public static let `default` = MCWalletManger()
+
     
     // 请求的网络类型
     private var network: Network = MCAppConfig.network
     
     // 钱包列表
     public var walletList = RealmDBHelper.shared.mcDB.objects(MCWallet.self)
+    public var walletListInMemory: [String: MCWallet] = [String: MCWallet]()
+    
+
+    private func loadWalletsFromDb() {
+        if 0 == walletList.count {return}
+        self.walletListInMemory.removeAll()
+        for theWallet in walletList {
+            if 1 == theWallet.walletType {
+                let worlds = theWallet.exportMnemonicWords()
+                if nil == worlds {continue}
+                let seed = try! Mnemonic.createSeed(mnemonic: worlds!)
+                theWallet.hdWallet = HDWallet(seed: seed, network: MCAppConfig.network)
+                theWallet.wallet = nil
+            } else {
+                let privateKey = theWallet.exportPrivateKey()
+                if 0 == privateKey.count {continue}
+                theWallet.wallet = Wallet(network: network, privateKey: privateKey, debugPrints: false)
+                theWallet.hdWallet = nil
+            }
+            
+            if theWallet.id.count > 0 {
+                walletListInMemory[theWallet.id] = theWallet
+            }
+        }
+    }
+    
     
     // MARK:- 公有方法
     /// 是否存在钱包
@@ -38,33 +64,39 @@ public class MCWalletManger: NSObject {
     
     /// 最近使用的钱包名称
     public func recentlyWallet() -> MCWallet? {
-        if walletList.count <= 0 {return nil}
-        
-        let walletName =  UserDefaults.standard.value(forKey: RECENTLY_WALLET_NAME) as? String
+        let walletName =  UserDefaults.standard.value(forKey: RECENTLY_WALLET_ID) as? String
         if nil == walletName {
-            self.setRecentlyWallet(wallet: walletList.last!)
-            return walletList.last
+            return nil
         }
+        /*
         let realm = RealmDBHelper.shared.mcDB;
-        return realm.objects(MCWallet.self).filter("name = %@",walletName!).first
+        return realm.objects(MCWallet.self).filter("id = %@",walletName!).first
+ */
+        return walletListInMemory[walletName!]
     }
     
     /// 设置最近使用的钱包
     public func setRecentlyWallet(wallet: MCWallet) {
-        UserDefaults.standard.set(wallet.name, forKey:RECENTLY_WALLET_NAME )
+        UserDefaults.standard.set(wallet.id, forKey:RECENTLY_WALLET_ID )
     }
     
     /// 选择钱包
     public func selectWallet(id: String) -> MCWallet? {
+        /*
         let wallet = walletList.filter("id = %@",id).first
         if nil != wallet {
             self.setRecentlyWallet(wallet: wallet!)
         }
-        return wallet
+        return wallet */
+        if 0 == id.count {return nil}
+        return walletListInMemory[id]
     }
     
     /// 删除钱包
     public func removeWallet(wallet: MCWallet) {
+        if 0 == walletListInMemory.count {return}
+        walletListInMemory.removeValue(forKey: wallet.id)
+        
         if 0 == walletList.count { return}
         let w = walletList.filter("id = %@", wallet.id).first
         if nil == w { return}
@@ -84,6 +116,7 @@ public class MCWalletManger: NSObject {
     public func descript() {
         let realm = RealmDBHelper.shared.mcDB
         print(realm.configuration.fileURL ?? "")
+        print(walletList)
     }
     
     // MARK:- 创建（导入）钱包
@@ -123,30 +156,31 @@ public class MCWalletManger: NSObject {
         
         // 钱包所关联的Tokens
         // 默认为创建Eth/BGFT两种帐户(写死）
-        let ethToken: Token
-        if !Token.exist(symbol: "ETH") {
-            ethToken = Token()
-            ethToken.symbol = "ETH"
-            ethToken.decimals = 18
-            ethToken.image = ""
-            Token.addToken(token: ethToken)
-        } else {
-            ethToken = Token.getToken(symbol: "ETH")!
-        }
-        mcWallet.tokens.append(ethToken)
         
         let bgftToken: Token
         if !Token.exist(symbol: "BGFT") {
             bgftToken = Token()
             bgftToken.symbol = "BGFT"
             bgftToken.decimals = 18
-            bgftToken.contract = ""
-            bgftToken.image = ""
+            bgftToken.contract = "0x39ACa4347248873842dDfB91948aaAC3268682bD"
+            bgftToken.image = "coin_BGFT"
             Token.addToken(token: bgftToken)
         } else {
             bgftToken = Token.getToken(symbol: "BGFT")!
         }
         mcWallet.tokens.append(bgftToken)
+        
+        let ethToken: Token
+        if !Token.exist(symbol: "ETH") {
+            ethToken = Token()
+            ethToken.symbol = "ETH"
+            ethToken.decimals = 18
+            ethToken.image = "coin_ETH"
+            Token.addToken(token: ethToken)
+        } else {
+            ethToken = Token.getToken(symbol: "ETH")!
+        }
+        mcWallet.tokens.append(ethToken)
         
         let realm = RealmDBHelper.shared.mcDB;
         try! realm.write {
@@ -155,6 +189,7 @@ public class MCWalletManger: NSObject {
         
         // 设置刚创建的钱包为当前钱包
         self.setRecentlyWallet(wallet: mcWallet)
+        self.walletListInMemory[mcWallet.id] = mcWallet
         
         return mcWallet
     }
@@ -214,6 +249,7 @@ public class MCWalletManger: NSObject {
         
         // 设置刚创建的钱包为当前钱包
         self.setRecentlyWallet(wallet: mcWallet)
+        self.walletListInMemory[mcWallet.id] = mcWallet
         
         return mcWallet
     }
@@ -236,6 +272,7 @@ public class MCWalletManger: NSObject {
         return true
     }
     
+    /*
     // MARK:- 老版本的数据迁移
     private  let dataDir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/data/"
     // 从归档文件中迁移钱包到数据库
@@ -270,7 +307,12 @@ public class MCWalletManger: NSObject {
             try? fileManager.removeItem(at: url)
         }
         
+        do {
+            try FileManager.default.removeItem(atPath: dataDir)
+        } catch {
+            print("Delete failed")
+        }
     }
-
+ */
 
 }

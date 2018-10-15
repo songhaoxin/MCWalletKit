@@ -172,7 +172,7 @@
 					607FACCF1AFB9204008FA782 = {
 						CreatedOnToolsVersion = 6.3.1;
 						DevelopmentTeam = URDBT3733J;
-						LastSwiftMigration = 0900;
+						LastSwiftMigration = 0940;
 					};
 				};
 			};
@@ -394,6 +394,7 @@
 			baseConfigurationReference = 33FA2B519C8EABB6937DDF04 /* Pods-MCWalletKit_Example.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				DEVELOPMENT_TEAM = URDBT3733J;
 				INFOPLIST_FILE = MCWalletKit/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
@@ -401,6 +402,7 @@
 				MODULE_NAME = ExampleApp;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.vivgoo.MCWalletKit-Example";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_SWIFT3_OBJC_INFERENCE = Default;
 				SWIFT_VERSION = 4.0;
 			};
@@ -411,6 +413,7 @@
 			baseConfigurationReference = ADAC556C9DDA0A4B69BA5992 /* Pods-MCWalletKit_Example.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				DEVELOPMENT_TEAM = URDBT3733J;
 				INFOPLIST_FILE = MCWalletKit/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
